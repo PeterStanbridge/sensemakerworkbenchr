@@ -1,20 +1,40 @@
 Package: sensemakerworkbenchr
 Title: Moduralised SenseMaker® Workbench
 Version: 0.0.0.9000
-Authors@R: person('Peter', 'Stanbridge', email = 'peter.stanbridge@thecynefin.co', role = c('cre', 'aut'))
-Description: This is the moduralised SenseMaker® Workbench. New features are provided by creating modules.
+Authors@R: 
+    person("Peter", "Stanbridge", , "peter.stanbridge@thecynefin.co", role = c("cre", "aut"))
+Description: This is the moduralised SenseMaker® Workbench. New features
+    are provided by creating modules.
 License: MIT + file LICENSE
-Imports: 
-    config (>= 0.3.2),
-    golem (>= 0.4.1),
-    shiny (>= 1.8.0)
-Encoding: UTF-8
-LazyData: true
-RoxygenNote: 7.1.1
 URL: https://github.com/PeterStanbridge/sensemakerworkbenchr.git
-BugReports: https://github.com/PeterStanbridge/sensemakerworkbenchr.git/issues
+BugReports: 
+    https://github.com/PeterStanbridge/sensemakerworkbenchr.git/issues
+Imports: 
+    com.icatalyst.singularity,
+    config (>= 0.3.2),
+    dplyr,
+    golem (>= 0.4.1),
+    httr,
+    jose,
+    jsonlite,
+    lubridate,
+    magrittr,
+    purrr,
+    sensemakerdatar,
+    shiny (>= 1.8.0),
+    shinydashboard,
+    shinydashboardPlus,
+    shinyjs,
+    shinyStore,
+    shinyvalidate,
+    shinyWidgets,
+    stringr,
+    utils
 Suggests: 
     spelling,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
+Encoding: UTF-8
 Language: en-US
+LazyData: true
+RoxygenNote: 7.2.3

@@ -62,6 +62,21 @@ golem::fill_desc(
 #golem::use_utils_ui(with_test = TRUE)
 #golem::use_utils_server(with_test = TRUE)
 
+# our additions
+usethis::use_package("dplyr")
+usethis::use_pipe()
+usethis::use_package("rlang")
+usethis::use_package("jsonlite")
+usethis::use_package("lubridate")
+usethis::use_package("shinyStore")
+usethis::use_package("purrr")
+usethis::use_package("dplyr")
+usethis::use_package("utils")
+usethis::use_package("jose")
+usethis::use_package("stringr")
+usethis::use_package("utils")
+                                                                                                                                                   usethis::use_package("jose")
+
 # You're now set! ----
 
 # go to dev/02_dev.R
