@@ -75,6 +75,7 @@ usethis::use_package("utils")
 usethis::use_package("jose")
 usethis::use_package("stringr")
 usethis::use_package("utils")
+usethis::use_package("com.icatalyst.singularity")
                                                                                                                                                    usethis::use_package("jose")
 
 # You're now set! ----

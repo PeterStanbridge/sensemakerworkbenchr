@@ -5,6 +5,7 @@
 #' @import shiny
 #' @import shinydashboard
 #' @import shinydashboardPlus
+#' @importFrom com.icatalyst.singularity Singularity
 #' @noRd
 #'
 singularity <<-

@@ -7,7 +7,7 @@
 #' @import shinydashboard
 #' @import shinydashboardPlus
 #' @import sensemakerdatar
-#' @import com.icatalyst.singularity
+# #' @import com.icatalyst.singularity
 #' @import shinyWidgets
 #' @import shinyjs
 #' @import shinyvalidate
