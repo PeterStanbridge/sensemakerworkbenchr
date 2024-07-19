@@ -1,0 +1,9 @@
+curl -u 'PeterStanbridge' https://api.github.com/PeterStanbridge/repos -d '{"name":"Sensemakerworkbenchr"}'
+
+curl -u 'PeterStanbridge' https://api.github.com/user/repos -d '{"name":"sensemakerworkbenchr"}'
+
+git remote add origin git@github.com:PeterStanbridge/sensemakerworkbenchr.git
+
+
+Tuesday 26th Jun work - 4.5 hours - get the {golem} set up for modularised workbench including setting up git and the GitHub repository and started the security and framework list. 
+
