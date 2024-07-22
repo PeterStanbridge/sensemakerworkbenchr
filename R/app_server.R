@@ -32,10 +32,6 @@ app_server <- function(input, output, session) {
   control_values <- reactiveValues(workbenchID = NULL, allowed_workbench_ids = NULL, allowed_dashboard_ids = NULL, selected_workbench_id = "nothing selected", selected_dashboard_id = "nothing selected", authorised_click = FALSE)
   update_type <-  reactiveValues(type = NULL)
   build_headers <- reactiveVal(TRUE)
-
-
-
-
   fw_allowed <- reactive(get_authorised_frameworks(security_return$sec_values[["securitySettingsToken"]]))
   db_allowed <- reactive(get_authorised_dashboards(security_return$sec_values[["securitySettingsToken"]]))
   fwd <- reactive({
@@ -164,6 +160,7 @@ app_server <- function(input, output, session) {
         }
 
       })
+
       observeEvent(input$authorisedDashboard, ignoreInit = TRUE, handlerExpr = {
         if (input$authorisedDashboard != "nothing selected") {
           if (input$authorisedFramework != "nothing selected") {
