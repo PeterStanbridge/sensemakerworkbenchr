@@ -7,7 +7,7 @@
 #' @import shinydashboard
 #' @import shinydashboardPlus
 #' @import sensemakerdatar
-# #' @import com.icatalyst.singularity
+#' @import com.icatalyst.singularity
 #' @import shinyWidgets
 #' @import shinyjs
 #' @import shinyvalidate
@@ -26,9 +26,11 @@
 app_server <- function(input, output, session) {
   # Your application server logic
   # Basic helpers file
+
+  print("start the server")
   source("R/helpers.R")
 
-  security_return <- reactiveValues(sec_values = NULL, return = FALSE, rtoken = NULL)
+  security_return <- reactiveValues(sec_values = NULL, return = FALSE, rtoken = NULL, refresh_token = NULL)
   control_values <- reactiveValues(workbenchID = NULL, allowed_workbench_ids = NULL, allowed_dashboard_ids = NULL, selected_workbench_id = "nothing selected", selected_dashboard_id = "nothing selected", authorised_click = FALSE)
   update_type <-  reactiveValues(type = NULL)
   build_headers <- reactiveVal(TRUE)
@@ -42,6 +44,7 @@ app_server <- function(input, output, session) {
       if (update_type$type == "dashboard") {tmpframework_id <- NULL} else {tmpframework_id <- control_values$selected_workbench_id}
       if (update_type$type == "workbench") {tmpdashboard_id <- NULL} else {tmpdashboard_id <- control_values$selected_dashboard_id}
     }
+    print("we are getting the datqa new")
     sensemakerdatar::Data$new(framework_id = tmpframework_id, dashboard_id = tmpdashboard_id, token = security_return$sec_values[["securitySettingsToken"]])
   })
 
@@ -59,6 +62,7 @@ app_server <- function(input, output, session) {
     securityVal <- handleSecurity(session, input, openAPIEndPoint)
     security_return$sec_values <- securityVal
     security_return$rtoken <- securityVal[["securitySettingsToken"]]
+    security_return$refresh_token <- securityVal[["refresh_token"]]
     if (securityVal[["doReturn"]]) {
       security_return$return <-TRUE
       break}
@@ -67,10 +71,11 @@ app_server <- function(input, output, session) {
     if (securityNR) {break}
   }
 
-
+    print("the security token")
+    print(isolate(security_return$rtoken))
+    print("the refresh token")
+    print(isolate(security_return$refresh_token))
     if (!is.null(isolate(security_return$rtoken))) {
-
-      output$token <- renderText(security_return$rtoken)
 
       control_values$allowed_workbench_ids <- unlist(unname(fw_allowed()))
       control_values$allowed_dashboard_ids <- unlist(unname(db_allowed()))
@@ -88,7 +93,7 @@ app_server <- function(input, output, session) {
 
             } else {
               if (wb_id %in% control_values$allowed_dashboard_ids) {
-                print("we are hear okay")
+
                 control_values$selected_dashboard_id <- wb_id
               }
             }
@@ -114,6 +119,7 @@ app_server <- function(input, output, session) {
 
 
       if(build_headers()) {
+        print("in build headers")
         output$authorisedFrameworks <- renderUI({
 
           tagList(
@@ -148,6 +154,28 @@ app_server <- function(input, output, session) {
 
       observeEvent(input$authorisedFramework, ignoreInit = TRUE, handlerExpr = {
         if (input$authorisedFramework != "nothing selected") {
+
+          securitySettingsToken <- input$wbtokStore$token[[2]]
+          strings <- strsplit(securitySettingsToken, ".", fixed = TRUE)
+          tokenInside <- rawToChar(jose::base64url_decode(strings[[1]][2]))
+          jsonTokenInside <- jsonlite::fromJSON(tokenInside)
+          tokenExpiry <- jsonTokenInside[["exp"]]
+        #  print(paste("the token expires", lubridate::as_datetime(tokenExpiry, tz = "UTC"), "and now is", now(), "and date difference", lubridate::as.difftime(now() %--% lubridate::as_datetime(tokenExpiry, tz = "UTC"))))
+        #  print(paste("and the refresh token is", jsonTokenInside[["refresh_token"]]))
+        #  if (lubridate::as.difftime(now() %--% lubridate::as_datetime(tokenExpiry, tz = "UTC")) < 0) {
+            tok1Tok <- vector("list", length = 2)
+            tok1Tok[[1]] <- NULL
+            tok1 <- get2.4RefreshedTokan(openAPIEndPoint, security_return$refresh_token)
+            print("tok1 is")
+            print(tok1)
+            tok1 <- strsplit(tok1, "\"")
+            tok1Tok[[2]] <- tok1[[1]][[which(tok1[[1]] %in% "access_token") + 2]]
+            shinyStore::updateStore(session, name = "token", value = isolate(tok1Tok))
+            security_return$rtoken <-  isolate(tok1Tok)
+            security_return$sec_values[["securitySettingsToken"]] <- security_return$rtoken
+         # }
+
+
           if (input$authorisedDashboard != "nothing selected") {
             updatePickerInput(session = session, "authorisedDashboard", selected = "nothing selected")
           }

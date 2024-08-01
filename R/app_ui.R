@@ -5,15 +5,20 @@
 #' @import shiny
 #' @import shinydashboard
 #' @import shinydashboardPlus
+#' @import com.icatalyst.singularity
 #' @importFrom com.icatalyst.singularity Singularity
 #' @noRd
 #'
-singularity <<-
-  com.icatalyst.singularity::Singularity$new('client_id', 'client_secret', 'client_key')
+#'
+
+#singularity <<-
+  #com.icatalyst.singularity::Singularity$new('client_id', 'client_secret', 'client_key')
 
 app_ui <- function(request) {
   # Define UI for application that draws a histogram
+  assign("singularity", com.icatalyst.singularity::Singularity$new('client_id', 'client_secret', 'client_key'), envir = .GlobalEnv)
   fluidPage(
+
     singularity$shiny_tags(shiny::tags),
     shinyStore::initStore(id = "wbtokStore", namespace = "CEWorkbench"),
     tagList(
