@@ -3,8 +3,8 @@ handleSecurity <- function(session, input, openAPIEndPoint) {
 
   server_root <- 'https://openapi.sensemaker-suite.com/singularity/token'
 
-  returnList <- vector("list", length = 6)
-  names(returnList) <- c("security", "workbenchID", "language", "dataLanguages", "doReturn", "securitySettingsToken")
+  returnList <- vector("list", length = 7)
+  names(returnList) <- c("security", "workbenchID", "language", "dataLanguages", "doReturn", "securitySettingsToken", "refresh_token")
   returnList[["security"]] <- FALSE
   # we need to see if there is a workbenchID because we are going to test if it is authorised
   queryParms <- parseQueryString(session$clientData$url_search)
@@ -65,7 +65,8 @@ handleSecurity <- function(session, input, openAPIEndPoint) {
   jsonTokenInside <- jsonlite::fromJSON(tokenInside)
 
   tokenExpiry <- jsonTokenInside[["exp"]]
-
+  tok1 <- get2.4RefreshedTokan("openapi", jsonTokenInside[["refresh_token"]])
+  returnList[["refresh_token"]] <- jsonTokenInside[["refresh_token"]]
 
   # if the token is expired then get a refresh - updating the storage will restart the whole server
 
@@ -124,7 +125,7 @@ filter_data <- function(fwd) {
 }
 
 get_authorised_frameworks <- function(rtoken) {
-
+print("in get the authorised frameworks")
   projectJSON <- get2.4FrameworkDefinition("openapi", "", rtoken)
   project_list <- as.list(projectJSON[["id"]])
   project_names <- projectJSON[["name"]]
@@ -180,7 +181,7 @@ get2.4FrameworkDefinition <- function(topenAPIEndPoint, tworkbenchID, trToken) {
 
   out <- try( {
     # get the json from the returned project definition
-
+print("in the get the authorised frameworks")
     return(fromJSON(content(GET(
       paste0("https://", topenAPIEndPoint, ".sensemaker-suite.com/apis/projectdefinition/",  tworkbenchID),
       add_headers(.headers = c('Authorization' = paste("Bearer", trToken, sep = " ")
@@ -213,7 +214,7 @@ get2.4DashboardDefinition <- function(topenAPIEndPoint, tcDashboardID, trToken) 
 
 get2.4RefreshedTokan <- function(topenAPIEndPoint, trRefrshToken) {
 
-  return(content(GET(
+  return(httr::content(httr::GET(
     paste0("https://openapi.sensemaker-suite.com/singularity/token/refresh?refresh_token=", trRefrshToken),
   ), as = 'text', encoding = 'utf-8', verbose()))
 }
