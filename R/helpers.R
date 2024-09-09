@@ -3,6 +3,117 @@ handleSecurity <- function(session, input, openAPIEndPoint) {
 
   server_root <- 'https://openapi.sensemaker-suite.com/singularity/token'
 
+
+  returnList <- vector("list", length = 7)
+  names(returnList) <- c("security", "workbenchID", "language", "dataLanguages", "doReturn", "securitySettingsToken", "importFile")
+  returnList[["security"]] <- FALSE
+  # we need to see if there is a workbenchID because we are going to test if it is authorised
+  queryParms <- parseQueryString(session$clientData$url_search)
+  workbenchID <- queryParms[['workbenchID']]
+  returnList[["workbenchID"]] <- workbenchID
+  importFile <- queryParms[['importFile']]
+  returnList[["importFile"]] <- importFile
+
+  language <- queryParms[['language']]
+  returnList[["language"]] <- language
+  # data languages is optional in case filtering wanted in the export
+  dataLanguages <-  queryParms[['dataLanguages']]
+  returnList[["dataLanguages"]] <- dataLanguages
+  #  server_params specifies the redirect URL for returning.
+
+  server_params <- paste0('redirect_uri=', utils::URLencode(paste0(session$clientData$url_protocol,
+                                                                   "//", session$clientData$url_hostname, ":", session$clientData$url_port, session$clientData$url_pathname,
+                                                                   "?workbenchID=", workbenchID), reserved = TRUE))
+
+  # Retrieve the hash from the URL - this will be the token if it is there
+  hash <- session$clientData$url_hash
+
+  hashParams <- lapply(
+    strsplit(strsplit(hash, '#', TRUE)[[1]], '&'),
+    function(x){
+      kvp <- strsplit(x, '=')
+      if (length(kvp) == 0 || kvp[[1]][1] != 'token') NULL else kvp[[1]][2]
+    }
+  )
+
+  if(is.null(isolate(input$wbtokStore$token)) && length(hashParams) == 0) {
+
+    singularity$shiny_redirect(session, paste(server_root, server_params, sep="?"))
+    returnList[["doReturn"]] <- TRUE
+    return(returnList)
+  }
+
+  if (length(hashParams) > 0) {
+
+
+    updateQueryString(ifelse(base::trimws(workbenchID) != "/", paste0("?workbenchID=", workbenchID),
+                             "?noParameters"))
+    # update the browser store with the token
+    shinyStore::updateStore(session, name = "token", value = isolate(hashParams))
+
+  } else {
+
+    hashParams <- input$wbtokStore$token
+
+  }
+  securitySettingsToken <- hashParams[[2]]
+
+
+  strings <- strsplit(securitySettingsToken, ".", fixed = TRUE)
+  tokenInside <- rawToChar(jose::base64url_decode(strings[[1]][2]))
+  jsonTokenInside <- jsonlite::fromJSON(tokenInside)
+
+  tokenExpiry <- jsonTokenInside[["exp"]]
+
+
+  # if the token is expired then get a refresh - updating the storage will restart the whole server
+
+  #    if (ifelse(as.difftime(lubridate::ymd_hms(lubridate::now(tzone = "Europe/London"))
+  # %--%  lubridate::as_datetime(tokenExpiry/1000, tz = "GB")) < 0, TRUE, FALSE)) {
+ # if (lubridate::as.difftime(now() %--% lubridate::as_datetime(tokenExpiry, tz = "UTC")) < 0) {
+  if (lubridate::as.difftime(lubridate::interval(now(), lubridate::as_datetime(tokenExpiry, tz = "Europe/London"))) < 0) {
+    tok1Tok <- vector("list", length = 2)
+    tok1Tok[[1]] <- NULL
+
+    tok1 <- get2.4RefreshedTokan(openAPIEndPoint, jsonTokenInside[["refresh_token"]])
+
+    if (length(unlist(tok1[[1]])) == 0) {
+      singularity$shiny_redirect(session, paste(server_root, server_params, sep="?"))
+      returnList[["doReturn"]] <- FALSE
+      returnList[["security"]] <- TRUE
+      return(returnList)
+    }
+    if (grepl("Refresh token was invalid or expired", unlist(tok1[[1]]), fixed = TRUE)) {
+      singularity$shiny_redirect(session, paste(server_root, server_params, sep="?"))
+      returnList[["doReturn"]] <- FALSE
+      returnList[["security"]] <- TRUE
+      return(returnList)
+    }
+    tok1 <- strsplit(tok1, "\"")
+
+    tok1Tok[[2]] <- tok1[[1]][[which(tok1[[1]] %in% "access_token") + 2]]
+
+    shinyStore::updateStore(session, name = "token", value = isolate(tok1Tok))
+
+    returnList[["securitySettingsToken"]] <- securitySettingsToken
+    returnList[["doReturn"]] <- FALSE
+    returnList[["security"]] <- TRUE
+    return(returnList)
+
+  }
+
+  returnList[["securitySettingsToken"]] <- securitySettingsToken
+  returnList[["doReturn"]] <- FALSE
+  returnList[["security"]] <- TRUE
+  return(returnList)
+
+
+}
+# Security interface
+handleSecurity_before <- function(session, input, openAPIEndPoint) {
+
+  server_root <- 'https://openapi.sensemaker-suite.com/singularity/token'
+
   returnList <- vector("list", length = 7)
   names(returnList) <- c("security", "workbenchID", "language", "dataLanguages", "doReturn", "securitySettingsToken", "refresh_token")
   returnList[["security"]] <- FALSE
@@ -72,9 +183,9 @@ handleSecurity <- function(session, input, openAPIEndPoint) {
 
   #    if (ifelse(as.difftime(lubridate::ymd_hms(lubridate::now(tzone = "Europe/London"))
   # %--%  lubridate::as_datetime(tokenExpiry/1000, tz = "GB")) < 0, TRUE, FALSE)) {
- # if (as.difftime(now() %--% lubridate::as_datetime(tokenExpiry, tz = "UTC")) < 0) {
-  if (as.difftime(interval(now(), as_datetime(tokenExpiry, tz = "UTC"))) < 0) {
-
+ # if (as.difftime(now() %--% lubridate::as_datetime(tokenExpiry, tz = "UTC")) < 0) { Europe/London
+ # if (as.difftime(interval(now(), as_datetime(tokenExpiry, tz = "UTC"))) < 0) {
+  if (as.difftime(interval(now(), as_datetime(tokenExpiry, tz = "Europe/London"))) < 0) {
     tok1Tok <- vector("list", length = 2)
     tok1Tok[[1]] <- NULL
 

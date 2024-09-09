@@ -27,9 +27,66 @@ app_server <- function(input, output, session) {
   # Your application server logic
   # Basic helpers file
 
-  print("start the server")
-  source("R/helpers.R")
 
+  source("R/helpers.R")
+  security_token <- R6::R6Class("security_token",
+                                public = list(
+                                  #' @field tokenr
+                                  tokenr = NULL,
+                                  token_expires = NULL,
+                                  refresh_token = NULL,
+                                  #' @description
+                                  #' Create a new instance of the security token object
+                                  #' @param token The token to store
+                                  initialize = function(token = NULL) {
+                                    if (!is.null(token)) {
+                                      self$tokenr <- token
+                                      # extract expiry and refresh token and populate
+                                      self$token_expires <- private$extract_expiry(token)
+                                      self$refresh_token <- private$extract_refresh_token(token)
+                                    }
+                                  },
+                                  #' @description
+                                  #' Add a new token to the token object
+                                  #' @param token The token to add
+                                  add_token = function(token) {
+                                    self$tokenr <- token
+                                  },
+                                  #' @description
+                                  #' Get the current token
+                                  #' @returns the token
+                                  get_token = function() {
+                                    return(self$tokenr)
+                                  },
+                                  #' @description
+                                  #' Get the token expiry
+                                  #' @returns the token expiry date/time
+                                  get_token_expiry = function() {
+                                    return(self$token_expires)
+                                  },
+                                  #' @description
+                                  #' Get the token refresh token
+                                  #' @returns the refresh token
+                                  get_refresh_token = function() {
+                                    return(self$refresh_token)
+                                  }
+
+                                ),
+                                private = list(
+
+                                  # extract out the expiry date from the token
+                                  extract_expiry = function(token) {
+                                    return("")
+                                  },
+                                  # extract out the expiry refresh token
+                                  extract_refresh_token = function(token) {
+                                    return("")
+                                  }
+
+                                )
+  )
+
+  token_object <- security_token$new()
   security_return <- reactiveValues(sec_values = NULL, return = FALSE, rtoken = NULL, refresh_token = NULL)
   control_values <- reactiveValues(workbenchID = NULL, allowed_workbench_ids = NULL, allowed_dashboard_ids = NULL, selected_workbench_id = "nothing selected", selected_dashboard_id = "nothing selected", authorised_click = FALSE)
   update_type <-  reactiveValues(type = NULL)
@@ -44,7 +101,7 @@ app_server <- function(input, output, session) {
       if (update_type$type == "dashboard") {tmpframework_id <- NULL} else {tmpframework_id <- control_values$selected_workbench_id}
       if (update_type$type == "workbench") {tmpdashboard_id <- NULL} else {tmpdashboard_id <- control_values$selected_dashboard_id}
     }
-    print("we are getting the datqa new")
+
     sensemakerdatar::Data$new(framework_id = tmpframework_id, dashboard_id = tmpdashboard_id, token = security_return$sec_values[["securitySettingsToken"]])
   })
 
@@ -58,7 +115,9 @@ app_server <- function(input, output, session) {
   openAPIEndPoint <- "openapi"
 
   security_return$return <-FALSE
-  observe ({while(!securityNR) {
+  observe ({
+
+    while(!securityNR) {
     securityVal <- handleSecurity(session, input, openAPIEndPoint)
     security_return$sec_values <- securityVal
     security_return$rtoken <- securityVal[["securitySettingsToken"]]
@@ -71,10 +130,9 @@ app_server <- function(input, output, session) {
     if (securityNR) {break}
   }
 
-    print("the security token")
-    print(isolate(security_return$rtoken))
-    print("the refresh token")
-    print(isolate(security_return$refresh_token))
+    print("the token is")
+    print(securityVal[["securitySettingsToken"]])
+
     if (!is.null(isolate(security_return$rtoken))) {
 
       control_values$allowed_workbench_ids <- unlist(unname(fw_allowed()))
@@ -119,7 +177,7 @@ app_server <- function(input, output, session) {
 
 
       if(build_headers()) {
-        print("in build headers")
+
         output$authorisedFrameworks <- renderUI({
 
           tagList(
@@ -160,20 +218,18 @@ app_server <- function(input, output, session) {
           tokenInside <- rawToChar(jose::base64url_decode(strings[[1]][2]))
           jsonTokenInside <- jsonlite::fromJSON(tokenInside)
           tokenExpiry <- jsonTokenInside[["exp"]]
-        #  print(paste("the token expires", lubridate::as_datetime(tokenExpiry, tz = "UTC"), "and now is", now(), "and date difference", lubridate::as.difftime(now() %--% lubridate::as_datetime(tokenExpiry, tz = "UTC"))))
-        #  print(paste("and the refresh token is", jsonTokenInside[["refresh_token"]]))
+
+           if (lubridate::as.difftime(interval(now(), lubridate::as_datetime(tokenExpiry, tz = "Europe/London"))) < 0) {
         #  if (lubridate::as.difftime(now() %--% lubridate::as_datetime(tokenExpiry, tz = "UTC")) < 0) {
             tok1Tok <- vector("list", length = 2)
             tok1Tok[[1]] <- NULL
             tok1 <- get2.4RefreshedTokan(openAPIEndPoint, security_return$refresh_token)
-            print("tok1 is")
-            print(tok1)
             tok1 <- strsplit(tok1, "\"")
             tok1Tok[[2]] <- tok1[[1]][[which(tok1[[1]] %in% "access_token") + 2]]
             shinyStore::updateStore(session, name = "token", value = isolate(tok1Tok))
             security_return$rtoken <-  isolate(tok1Tok)
             security_return$sec_values[["securitySettingsToken"]] <- security_return$rtoken
-         # }
+          }
 
 
           if (input$authorisedDashboard != "nothing selected") {
