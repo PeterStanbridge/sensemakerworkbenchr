@@ -4,8 +4,8 @@ handleSecurity <- function(session, input, openAPIEndPoint) {
   server_root <- 'https://openapi.sensemaker-suite.com/singularity/token'
 
 
-  returnList <- vector("list", length = 7)
-  names(returnList) <- c("security", "workbenchID", "language", "dataLanguages", "doReturn", "securitySettingsToken", "importFile")
+  returnList <- vector("list", length = 9)
+  names(returnList) <- c("security", "workbenchID", "language", "dataLanguages", "doReturn", "securitySettingsToken", "importFile", "refresh_token", "token_expiry")
   returnList[["security"]] <- FALSE
   # we need to see if there is a workbenchID because we are going to test if it is authorised
   queryParms <- parseQueryString(session$clientData$url_search)
@@ -62,8 +62,9 @@ handleSecurity <- function(session, input, openAPIEndPoint) {
   strings <- strsplit(securitySettingsToken, ".", fixed = TRUE)
   tokenInside <- rawToChar(jose::base64url_decode(strings[[1]][2]))
   jsonTokenInside <- jsonlite::fromJSON(tokenInside)
-
+  returnList[["refresh_token"]] <- jsonTokenInside[["refresh_token"]]
   tokenExpiry <- jsonTokenInside[["exp"]]
+  returnList[["token_expiry"]] <- tokenExpiry
 
 
   # if the token is expired then get a refresh - updating the storage will restart the whole server
@@ -236,7 +237,7 @@ filter_data <- function(fwd) {
 }
 
 get_authorised_frameworks <- function(rtoken) {
-print("in get the authorised frameworks")
+
   projectJSON <- get2.4FrameworkDefinition("openapi", "", rtoken)
   project_list <- as.list(projectJSON[["id"]])
   project_names <- projectJSON[["name"]]
@@ -292,7 +293,7 @@ get2.4FrameworkDefinition <- function(topenAPIEndPoint, tworkbenchID, trToken) {
 
   out <- try( {
     # get the json from the returned project definition
-print("in the get the authorised frameworks")
+
     return(fromJSON(content(GET(
       paste0("https://", topenAPIEndPoint, ".sensemaker-suite.com/apis/projectdefinition/",  tworkbenchID),
       add_headers(.headers = c('Authorization' = paste("Bearer", trToken, sep = " ")

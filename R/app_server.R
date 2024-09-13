@@ -34,6 +34,7 @@ app_server <- function(input, output, session) {
                                   #' @field tokenr
                                   tokenr = NULL,
                                   token_expires = NULL,
+                                  security_values = NULL,
                                   refresh_token = NULL,
                                   #' @description
                                   #' Create a new instance of the security token object
@@ -53,6 +54,24 @@ app_server <- function(input, output, session) {
                                     self$tokenr <- token
                                   },
                                   #' @description
+                                  #' Add a new refresh token to the token object
+                                  #' @param token The token to add
+                                  add_refresh_token = function(token) {
+                                    self$refresh_token <- token
+                                  },
+                                  #' @description
+                                  #' Add a new token expiry date
+                                  #' @param tokexpiry_dateen The long integer expiry date
+                                  add_token_expiry = function(expiry_date) {
+                                    self$token_expires <- expiry_date
+                                  },
+                                  #' @description
+                                  #' Add a new token expiry date
+                                  #' @param tokexpiry_dateen The long integer expiry date
+                                  add_security_values = function(security_values) {
+                                    self$security_values <- security_values
+                                  },
+                                  #' @description
                                   #' Get the current token
                                   #' @returns the token
                                   get_token = function() {
@@ -69,6 +88,18 @@ app_server <- function(input, output, session) {
                                   #' @returns the refresh token
                                   get_refresh_token = function() {
                                     return(self$refresh_token)
+                                  },
+                                  #' @description
+                                  #' Get the full security values from the security function
+                                  #' @returns the full security values
+                                  get_security_values = function() {
+                                    return(self$security_values)
+                                  },
+                                  #' @description
+                                  #' Get the workbench_id
+                                  #' @returns the workbench id
+                                  get_workbench_id = function() {
+                                    return(self$security_values[["workbenchID"]])
                                   }
 
                                 ),
@@ -86,13 +117,16 @@ app_server <- function(input, output, session) {
                                 )
   )
 
+
   token_object <- security_token$new()
-  security_return <- reactiveValues(sec_values = NULL, return = FALSE, rtoken = NULL, refresh_token = NULL)
+ # security_return <- reactiveValues(sec_values = NULL, return = FALSE, rtoken = NULL, refresh_token = NULL)
   control_values <- reactiveValues(workbenchID = NULL, allowed_workbench_ids = NULL, allowed_dashboard_ids = NULL, selected_workbench_id = "nothing selected", selected_dashboard_id = "nothing selected", authorised_click = FALSE)
   update_type <-  reactiveValues(type = NULL)
   build_headers <- reactiveVal(TRUE)
-  fw_allowed <- reactive(get_authorised_frameworks(security_return$sec_values[["securitySettingsToken"]]))
-  db_allowed <- reactive(get_authorised_dashboards(security_return$sec_values[["securitySettingsToken"]]))
+ # fw_allowed <- reactive(get_authorised_frameworks(security_return$sec_values[["securitySettingsToken"]]))
+ # db_allowed <- reactive(get_authorised_dashboards(security_return$sec_values[["securitySettingsToken"]]))
+  fw_allowed <- reactive(get_authorised_frameworks(token_object$get_token()))
+  db_allowed <- reactive(get_authorised_dashboards(token_object$get_token()))
   fwd <- reactive({
     if (is.null(update_type$type)) {
       tmpframework_id <- NULL
@@ -102,7 +136,9 @@ app_server <- function(input, output, session) {
       if (update_type$type == "workbench") {tmpdashboard_id <- NULL} else {tmpdashboard_id <- control_values$selected_dashboard_id}
     }
 
-    sensemakerdatar::Data$new(framework_id = tmpframework_id, dashboard_id = tmpdashboard_id, token = security_return$sec_values[["securitySettingsToken"]])
+   # sensemakerdatar::Data$new(framework_id = tmpframework_id, dashboard_id = tmpdashboard_id, token = security_return$sec_values[["securitySettingsToken"]])
+    sensemakerdatar::Data$new(framework_id = tmpframework_id, dashboard_id = tmpdashboard_id, token = token_object$get_token())
+
   })
 
 
@@ -114,38 +150,45 @@ app_server <- function(input, output, session) {
   # end point for the api calls.
   openAPIEndPoint <- "openapi"
 
-  security_return$return <-FALSE
+  #security_return$return <-FALSE
   observe ({
 
     while(!securityNR) {
     securityVal <- handleSecurity(session, input, openAPIEndPoint)
-    security_return$sec_values <- securityVal
-    security_return$rtoken <- securityVal[["securitySettingsToken"]]
-    security_return$refresh_token <- securityVal[["refresh_token"]]
+   # security_return$sec_values <- securityVal
+   # security_return$rtoken <- securityVal[["securitySettingsToken"]]
+   # security_return$refresh_token <- securityVal[["refresh_token"]]
+    token_object$add_token(securityVal[["securitySettingsToken"]])
+    token_object$add_refresh_token(securityVal[["refresh_token"]])
+    token_object$add_token_expiry(securityVal[["token_expiry"]])
+    token_object$add_security_values(securityVal)
+
     if (securityVal[["doReturn"]]) {
-      security_return$return <-TRUE
+     # security_return$return <-TRUE
       break}
     securityNR <- securityVal$security
     # if ( security_return$return) {return()}
     if (securityNR) {break}
   }
 
-    print("the token is")
-    print(securityVal[["securitySettingsToken"]])
 
-    if (!is.null(isolate(security_return$rtoken))) {
-
+    #if (!is.null(isolate(security_return$rtoken))) {
+    if (!is.null(token_object$get_token())) {
       control_values$allowed_workbench_ids <- unlist(unname(fw_allowed()))
       control_values$allowed_dashboard_ids <- unlist(unname(db_allowed()))
 
       if (control_values$authorised_click == FALSE) {
-        if (!is.null((security_return$sec_values[["workbenchID"]])) &&   !((stringr::str_remove(security_return$sec_values[["workbenchID"]], "/") %in% control_values$allowed_workbench_ids) |
-                                                                           (stringr::str_remove(security_return$sec_values[["workbenchID"]], "/") %in% control_values$allowed_dashboard_ids) )) {
+       # if (!is.null((security_return$sec_values[["workbenchID"]])) &&   !((stringr::str_remove(security_return$sec_values[["workbenchID"]], "/") %in% control_values$allowed_workbench_ids) |
+        #                                                                   (stringr::str_remove(security_return$sec_values[["workbenchID"]], "/") %in% control_values$allowed_dashboard_ids) )) {
+          if (!is.null((token_object$get_workbench_id())) &&   !((stringr::str_remove(token_object$get_workbench_id(), "/") %in% control_values$allowed_workbench_ids) |
+                                                                             (stringr::str_remove(token_object$get_workbench_id(), "/") %in% control_values$allowed_dashboard_ids) )) {
           output$select_framework <- renderText("workbenchID in URL is invalid or not authorised")
         } else {
-          if (!is.null(security_return$sec_values[["workbenchID"]])) {
+         # if (!is.null(security_return$sec_values[["workbenchID"]])) {
+            if (!is.null(token_object$get_workbench_id())) {
             output$select_framework_framework <- renderText("")
-            wb_id <- stringr::str_remove(security_return$sec_values[["workbenchID"]], "/")
+           # wb_id <- stringr::str_remove(security_return$sec_values[["workbenchID"]], "/")
+            wb_id <- stringr::str_remove(token_object$get_workbench_id(), "/")
             if (wb_id %in% control_values$allowed_workbench_ids) {
               control_values$selected_workbench_id <- wb_id
 
@@ -220,15 +263,16 @@ app_server <- function(input, output, session) {
           tokenExpiry <- jsonTokenInside[["exp"]]
 
            if (lubridate::as.difftime(interval(now(), lubridate::as_datetime(tokenExpiry, tz = "Europe/London"))) < 0) {
+             print("token is expired")
         #  if (lubridate::as.difftime(now() %--% lubridate::as_datetime(tokenExpiry, tz = "UTC")) < 0) {
-            tok1Tok <- vector("list", length = 2)
-            tok1Tok[[1]] <- NULL
-            tok1 <- get2.4RefreshedTokan(openAPIEndPoint, security_return$refresh_token)
-            tok1 <- strsplit(tok1, "\"")
-            tok1Tok[[2]] <- tok1[[1]][[which(tok1[[1]] %in% "access_token") + 2]]
-            shinyStore::updateStore(session, name = "token", value = isolate(tok1Tok))
-            security_return$rtoken <-  isolate(tok1Tok)
-            security_return$sec_values[["securitySettingsToken"]] <- security_return$rtoken
+        #    tok1Tok <- vector("list", length = 2)
+        #    tok1Tok[[1]] <- NULL
+         #   tok1 <- get2.4RefreshedTokan(openAPIEndPoint, security_return$refresh_token)
+         #   tok1 <- strsplit(tok1, "\"")
+          #  tok1Tok[[2]] <- tok1[[1]][[which(tok1[[1]] %in% "access_token") + 2]]
+          #  shinyStore::updateStore(session, name = "token", value = isolate(tok1Tok))
+          #  security_return$rtoken <-  isolate(tok1Tok)
+          #  security_return$sec_values[["securitySettingsToken"]] <- security_return$rtoken
           }
 
 
