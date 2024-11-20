@@ -27,100 +27,15 @@ app_server <- function(input, output, session) {
   # Your application server logic
   # Basic helpers file
 
-
   source("R/helpers.R")
-  security_token <- R6::R6Class("security_token",
-                                public = list(
-                                  #' @field tokenr
-                                  tokenr = NULL,
-                                  token_expires = NULL,
-                                  security_values = NULL,
-                                  refresh_token = NULL,
-                                  #' @description
-                                  #' Create a new instance of the security token object
-                                  #' @param token The token to store
-                                  initialize = function(token = NULL) {
-                                    if (!is.null(token)) {
-                                      self$tokenr <- token
-                                      # extract expiry and refresh token and populate
-                                      self$token_expires <- private$extract_expiry(token)
-                                      self$refresh_token <- private$extract_refresh_token(token)
-                                    }
-                                  },
-                                  #' @description
-                                  #' Add a new token to the token object
-                                  #' @param token The token to add
-                                  add_token = function(token) {
-                                    self$tokenr <- token
-                                  },
-                                  #' @description
-                                  #' Add a new refresh token to the token object
-                                  #' @param token The token to add
-                                  add_refresh_token = function(token) {
-                                    self$refresh_token <- token
-                                  },
-                                  #' @description
-                                  #' Add a new token expiry date
-                                  #' @param tokexpiry_dateen The long integer expiry date
-                                  add_token_expiry = function(expiry_date) {
-                                    self$token_expires <- expiry_date
-                                  },
-                                  #' @description
-                                  #' Add a new token expiry date
-                                  #' @param tokexpiry_dateen The long integer expiry date
-                                  add_security_values = function(security_values) {
-                                    self$security_values <- security_values
-                                  },
-                                  #' @description
-                                  #' Get the current token
-                                  #' @returns the token
-                                  get_token = function() {
-                                    return(self$tokenr)
-                                  },
-                                  #' @description
-                                  #' Get the token expiry
-                                  #' @returns the token expiry date/time
-                                  get_token_expiry = function() {
-                                    return(self$token_expires)
-                                  },
-                                  #' @description
-                                  #' Get the token refresh token
-                                  #' @returns the refresh token
-                                  get_refresh_token = function() {
-                                    return(self$refresh_token)
-                                  },
-                                  #' @description
-                                  #' Get the full security values from the security function
-                                  #' @returns the full security values
-                                  get_security_values = function() {
-                                    return(self$security_values)
-                                  },
-                                  #' @description
-                                  #' Get the workbench_id
-                                  #' @returns the workbench id
-                                  get_workbench_id = function() {
-                                    return(self$security_values[["workbenchID"]])
-                                  }
 
-                                ),
-                                private = list(
+  token_timer <- shiny::reactiveTimer(intervalMs = 3300000, session = session)
 
-                                  # extract out the expiry date from the token
-                                  extract_expiry = function(token) {
-                                    return("")
-                                  },
-                                  # extract out the expiry refresh token
-                                  extract_refresh_token = function(token) {
-                                    return("")
-                                  }
-
-                                )
-  )
-
+# , workbenchID = NULL, allowed_workbench_ids = NULL, allowed_dashboard_ids = NULL, selected_workbench_id = "nothing selected", selected_dashboard_id = "nothing selected", authorised_click = FALSE
 
   token_object <- security_token$new()
  # security_return <- reactiveValues(sec_values = NULL, return = FALSE, rtoken = NULL, refresh_token = NULL)
-  control_values <- reactiveValues(workbenchID = NULL, allowed_workbench_ids = NULL, allowed_dashboard_ids = NULL, selected_workbench_id = "nothing selected", selected_dashboard_id = "nothing selected", authorised_click = FALSE)
+  control_values <- reactiveValues(selected_workbench_id = "nothing selected", selected_dashboard_id = "nothing selected")
   update_type <-  reactiveValues(type = NULL)
   build_headers <- reactiveVal(TRUE)
  # fw_allowed <- reactive(get_authorised_frameworks(security_return$sec_values[["securitySettingsToken"]]))
@@ -174,13 +89,15 @@ app_server <- function(input, output, session) {
 
     #if (!is.null(isolate(security_return$rtoken))) {
     if (!is.null(token_object$get_token())) {
-      control_values$allowed_workbench_ids <- unlist(unname(fw_allowed()))
-      control_values$allowed_dashboard_ids <- unlist(unname(db_allowed()))
+      token_object$add_allowed_workbench_ids(unlist(unname(fw_allowed())))
+      token_object$add_allowed_dashboard_ids_ids(unlist(unname(db_allowed())))
+     # control_values$allowed_workbench_ids <- unlist(unname(fw_allowed()))
+     # control_values$allowed_dashboard_ids <- unlist(unname(db_allowed()))
 
-      if (control_values$authorised_click == FALSE) {
+      if (token_object$get_authorised_click() == FALSE) {
        # if (!is.null((security_return$sec_values[["workbenchID"]])) &&   !((stringr::str_remove(security_return$sec_values[["workbenchID"]], "/") %in% control_values$allowed_workbench_ids) |
         #                                                                   (stringr::str_remove(security_return$sec_values[["workbenchID"]], "/") %in% control_values$allowed_dashboard_ids) )) {
-          if (!is.null((token_object$get_workbench_id())) &&   !((stringr::str_remove(token_object$get_workbench_id(), "/") %in% control_values$allowed_workbench_ids) |
+          if (!is.null((token_object$get_workbench_id())) &&   !((stringr::str_remove(token_object$get_workbench_id(), "/") %in% token_object$get_allowed_workbench_ids()) |
                                                                              (stringr::str_remove(token_object$get_workbench_id(), "/") %in% control_values$allowed_dashboard_ids) )) {
           output$select_framework <- renderText("workbenchID in URL is invalid or not authorised")
         } else {
@@ -189,7 +106,7 @@ app_server <- function(input, output, session) {
             output$select_framework_framework <- renderText("")
            # wb_id <- stringr::str_remove(security_return$sec_values[["workbenchID"]], "/")
             wb_id <- stringr::str_remove(token_object$get_workbench_id(), "/")
-            if (wb_id %in% control_values$allowed_workbench_ids) {
+            if (wb_id %in% token_object$get_allowed_workbench_ids()) {
               control_values$selected_workbench_id <- wb_id
 
             } else {
@@ -229,7 +146,7 @@ app_server <- function(input, output, session) {
               pickerInput(inputId = "authorisedFramework",
                           label = "Your Authorised Frameworks",
                           choices = fw_allowed(),
-                          selected =  ifelse(!control_values$authorised_click, control_values$selected_workbench_id, "nothing selected"),
+                          selected =  ifelse(!token_object$get_authorised_click(), control_values$selected_workbench_id, "nothing selected"),
                           multiple = FALSE,
                           options = list(
                             `actions-box` = TRUE)
@@ -237,7 +154,7 @@ app_server <- function(input, output, session) {
               pickerInput(inputId = "authorisedDashboard",
                           label = "Your Authorised Dashboards",
                           choices = db_allowed(),
-                          selected = ifelse(!control_values$authorised_click, control_values$selected_dashboard_id, "nothing selected"),
+                          selected = ifelse(!token_object$get_authorised_click(), control_values$selected_dashboard_id, "nothing selected"),
                           multiple = FALSE,
                           options = list(
                             `actions-box` = TRUE)
@@ -283,7 +200,7 @@ app_server <- function(input, output, session) {
             #  output$select_framework <- renderText("")
           }
           update_type$type <- "workbench"
-          control_values$authorised_click <- TRUE
+          token_object$add_authorised_click(TRUE)
           control_values$selected_workbench_id <- input$authorisedFramework
         }
 
@@ -298,7 +215,7 @@ app_server <- function(input, output, session) {
             #   output$select_framework <- renderText("")
           }
           update_type$type <- "dashboard"
-          control_values$authorised_click <- TRUE
+          token_object$add_authorised_click(TRUE)
           control_values$selected_dashboard_id <- input$authorisedDashboard
 
         }

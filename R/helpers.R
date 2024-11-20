@@ -331,3 +331,130 @@ get2.4RefreshedTokan <- function(topenAPIEndPoint, trRefrshToken) {
   ), as = 'text', encoding = 'utf-8', verbose()))
 }
 
+
+security_token <- R6::R6Class("security_token",
+                              public = list(
+                                #' @field tokenr
+                                tokenr = NULL,
+                                token_expires = NULL,
+                                security_values = NULL,
+                                refresh_token = NULL,
+                                allowed_workbench_ids = NULL,
+                                allowed_dashboard_ids = NULL,
+                                authorised_click = FALSE,
+                                #' @description
+                                #' Create a new instance of the security token object
+                                #' @param token The token to store
+                                initialize = function(token = NULL) {
+                                  if (!is.null(token)) {
+                                    self$tokenr <- token
+                                    # extract expiry and refresh token and populate
+                                    self$token_expires <- private$extract_expiry(token)
+                                    self$refresh_token <- private$extract_refresh_token(token)
+                                  }
+                                },
+                                #' @description
+                                #' Add a new token to the token object
+                                #' @param token The token to add
+                                add_token = function(token) {
+                                  self$tokenr <- token
+                                },
+                                #' @description
+                                #' Add a new refresh token to the token object
+                                #' @param token The token to add
+                                add_refresh_token = function(token) {
+                                  self$refresh_token <- token
+                                },
+                                #' @description
+                                #' Add a new token expiry date
+                                #' @param tokexpiry_dateen The long integer expiry date
+                                add_token_expiry = function(expiry_date) {
+                                  self$token_expires <- expiry_date
+                                },
+                                #' @description
+                                #' Add a new token expiry date
+                                #' @param tokexpiry_dateen The long integer expiry date
+                                add_security_values = function(security_values) {
+                                  self$security_values <- security_values
+                                },
+                                #' @description
+                                #' Add a new list of allowable dashboards
+                                #' @param allowed_dashboard_ids The authorised dashboard ids
+                                add_allowed_dashboard_ids_ids = function(allowed_dashboard_ids) {
+                                  self$allowed_dashboard_ids <- allowed_dashboard_ids
+                                },
+                                #' @description
+                                #' Add a new list of allowable workbenches
+                                #' @param allowed_workbench_ids The authorised workbench ids
+                                add_allowed_workbench_ids = function(allowed_workbench_ids) {
+                                  self$allowed_workbench_ids <- allowed_workbench_ids
+                                },
+                                #' @description
+                                #' Add a new authorised_click
+                                #' @param authorised_click The authorised_click event
+                                add_authorised_click = function(authorised_click) {
+                                  self$authorised_click <- authorised_click
+                                },
+                                #' @description
+                                #' Get the current token
+                                #' @returns the token
+                                get_token = function() {
+                                  return(self$tokenr)
+                                },
+                                #' @description
+                                #' Get the token expiry
+                                #' @returns the token expiry date/time
+                                get_token_expiry = function() {
+                                  return(self$token_expires)
+                                },
+                                #' @description
+                                #' Get the token refresh token
+                                #' @returns the refresh token
+                                get_refresh_token = function() {
+                                  return(self$refresh_token)
+                                },
+                                #' @description
+                                #' Get the full security values from the security function
+                                #' @returns the full security values
+                                get_security_values = function() {
+                                  return(self$security_values)
+                                },
+                                #' @description
+                                #' Get the workbench_id
+                                #' @returns the workbench id
+                                get_workbench_id = function() {
+                                  return(self$security_values[["workbenchID"]])
+                                },
+                                #' @description
+                                #' Add a new list of allowable dashboards
+                                #' @returns allowed_dashboard_ids
+                                get_allowed_dashboard_ids_ids = function() {
+                                  return(self$allowed_dashboard_ids)
+                                },
+                                #' @description
+                                #' Add a new list of allowable workbenches
+                                #' @returns allowed_workbench_ids
+                                get_allowed_workbench_ids = function() {
+                                  return(self$allowed_workbench_ids)
+                                },
+                                #' @description
+                                #' Add a new authorised_click
+                                #' @return authorised_click event true or false
+                                get_authorised_click = function() {
+                                  return(self$authorised_click)
+                                }
+
+                              ),
+                              private = list(
+
+                                # extract out the expiry date from the token
+                                extract_expiry = function(token) {
+                                  return("")
+                                },
+                                # extract out the expiry refresh token
+                                extract_refresh_token = function(token) {
+                                  return("")
+                                }
+
+                              )
+)
