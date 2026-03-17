@@ -173,7 +173,7 @@ app_server <- function(input, output, session) {
       observeEvent(input$authorisedFramework, ignoreInit = TRUE, handlerExpr = {
         if (input$authorisedFramework != "nothing selected") {
 
-          securitySettingsToken <- input$wbtokStore$token[[2]]
+          securitySettingsToken <- token_object$get_token()
           strings <- strsplit(securitySettingsToken, ".", fixed = TRUE)
           tokenInside <- rawToChar(jose::base64url_decode(strings[[1]][2]))
           jsonTokenInside <- jsonlite::fromJSON(tokenInside)
